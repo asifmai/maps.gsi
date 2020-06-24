@@ -2,3 +2,5 @@ node_modules
 screenshot.png
 tmp
 temp
+*.csv
+*.json

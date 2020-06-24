@@ -6,6 +6,7 @@ const {siteLink, concurrency} = require('./keys');
 let browser;
 let samples;
 const locations = [];
+const fileName = `${moment().format('YYYY-MM-DD HH-mm')}`;
 
 const run = () => new Promise(async (resolve, reject) => {
   try {
@@ -15,14 +16,14 @@ const run = () => new Promise(async (resolve, reject) => {
     let promises = [];
     const limit = pLimit(concurrency);
 
-    for (let i = 0; i < samples.length; i++) {
-      // await fetchFromText(i);
+    // for (let i = 0; i < samples.length; i++) {
+    for (let i = 0; i < 5; i++) {
       promises.push(limit(() => fetchFromText(i)));
     }
     await Promise.all(promises);
 
     console.log(`Fetched ${locations.length} Records...`);
-    fs.writeFileSync(`${moment().format('YYYY-MM-DD HH-mm')}.json`, JSON.stringify(locations));
+    fs.writeFileSync(`${fileName}.json`, JSON.stringify(locations));
     
     await browser.close();
     
@@ -60,7 +61,7 @@ const fetchFromText = (sampleIdx) => new Promise(async (resolve, reject) => {
   try {
     console.log(`${sampleIdx+1}/${samples.length} - Fetching for Text: ${samples[sampleIdx]}`);
     page = await pupHelper.launchPage(browser);
-    const response = await page.goto(siteLink, {timeout: 0, waitUntil: 'load'});
+    await page.goto(siteLink, {timeout: 0, waitUntil: 'load'});
 
     await page.waitForSelector('form#search_f > input#query');
     await page.type('form#search_f > input#query', samples[sampleIdx], {delay: 50});
@@ -75,7 +76,6 @@ const fetchFromText = (sampleIdx) => new Promise(async (resolve, reject) => {
         searchTerm: samples[sampleIdx]
       };
 
-      // console.log(`${i+1}/${locationsNodes.length} - Fetching Details for Location...`)
       await page.evaluate((loc) => loc.click(), locationsNodes[i]);
       await page.waitFor(5000);
       const pageUrl = await page.url();
@@ -86,6 +86,7 @@ const fetchFromText = (sampleIdx) => new Promise(async (resolve, reject) => {
       location.elevation = await pupHelper.getTxt('span.elevation', page);
 
       locations.push(location);
+      await saveToCsv(location);
     }
 
     await page.close();
@@ -93,8 +94,15 @@ const fetchFromText = (sampleIdx) => new Promise(async (resolve, reject) => {
   } catch (error) {
     if (page) await page.close();
     console.log(`Run Error: ${error}`);
-    reject(error);
+    reolve(error);
   }
 })
+
+const saveToCsv = async (location) => {
+  if (!fs.existsSync(`${fileName}.csv`)) {
+    fs.writeFileSync(`${fileName}.csv`, `"Search Term","Latitude","Longitude","Elevation"\n`);
+  }
+  fs.appendFileSync(`${fileName}.csv`, `"${location.searchTerm}","${location.lat}","${location.long}","${location.elevation}"\n`);
+};
 
 run();
