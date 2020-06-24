@@ -16,8 +16,7 @@ const run = () => new Promise(async (resolve, reject) => {
     let promises = [];
     const limit = pLimit(concurrency);
 
-    // for (let i = 0; i < samples.length; i++) {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < samples.length; i++) {
       promises.push(limit(() => fetchFromText(i)));
     }
     await Promise.all(promises);
